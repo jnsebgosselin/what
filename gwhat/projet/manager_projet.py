@@ -227,7 +227,7 @@ class ProjetManager(QWidget):
     def close_projet(self):
         """Close the currently opened hdf5 project file."""
         if self.projet is not None:
-            self.projet.close()
+            self.projet.repack_project_file(reload=False)
             self.projet = None
 
     def show_newproject_dialog(self):

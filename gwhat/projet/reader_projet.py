@@ -13,6 +13,7 @@ import os
 import csv
 import os.path as osp
 from shutil import copyfile
+import subprocess
 
 # ---- Third party imports
 import h5py
@@ -98,6 +99,19 @@ class ProjetReader(object):
         else:
             return True
 
+    def get_project_items(self):
+        """
+        Return a list of addresses for all the items contained in the
+        project hdf5 file.
+        """
+        item_names = []
+        try:
+            self.__db.visit(item_names.append)
+        except RuntimeError:
+            return []
+        else:
+            return item_names
+
     def backup_project_file(self):
         """Copy the project hdf5 file in a file with a .bak extension."""
         if self.db is not None:
@@ -115,15 +129,69 @@ class ProjetReader(object):
             finally:
                 self.load_projet(filename)
 
-        try:
-            copyfile(self.filename, bak_filename)
-        except (OSError, PermissionError):
-            print('failed')
-            return False
-        else:
-            print('done')
-            return True
+    def repack_project_file(self, reload=True):
+        """
+        Repack the project hdf5 file to reclaim free space from deleted data.
+        The repacked file is saved with a .repack file extension.
+        """
+        print("Repacking project hdf5 file... ")
+        self.db.flush()
+        filename = self.filename
+        proj_items = self.get_project_items()
+        self.close()
 
+        # Try to delete the .repack file from the disk first.
+        if osp.exists(filename + '.repack'):
+            try:
+                os.remove(filename + '.repack')
+            except (OSError, PermissionError):
+                print('Project repacking failed.')
+                print("Reason: failed to delete the old .repack file.")
+                if reload is True:
+                    self.load_projet(filename)
+                return False
+
+        # Repack the project hdf5 file.
+        cmd = ['h5repack', '-i', filename, '-o', filename + '.repack']
+        sp = subprocess.Popen(
+            cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        sp.wait()
+        if not osp.exists(filename + '.repack'):
+            print('Project repacking failed.')
+            print("Reason: failed to repack the project file.")
+            if reload is True:
+                self.load_projet(filename)
+            return False
+
+        # Check that the structure of the repacked project file was
+        # preserved.
+        repack_proj = ProjetReader(filename + '.repack')
+        repack_proj_items = repack_proj.get_project_items()
+        repack_proj.close()
+
+        if proj_items == repack_proj_items:
+            # Replace the old project with the repacked one.
+            try:
+                copyfile(filename + '.repack', filename)
+            except (OSError, PermissionError, IOError):
+                print('Project repacking failed.')
+                print("Reason: failed to replace the project file with the "
+                      "repacked one.")
+                if reload is True:
+                    self.load_projet(filename)
+                return False
+            else:
+                print('done')
+                if reload is True:
+                    self.load_projet(filename)
+                return True
+        else:
+            print('Project repacking failed.')
+            print("Reason: the project structure was not preserved "
+                  "during repacking.")
+            if reload is True:
+                self.load_projet(filename)
+            return False
 
     # ---- Project Properties
     @property
