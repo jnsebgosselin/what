@@ -25,6 +25,7 @@ from gwhat.common.widgets import QDoubleSpinBox
 from gwhat.gwrecharge.gwrecharge_calc2 import RechgEvalWorker
 from gwhat.gwrecharge.gwrecharge_plot_results import FigureStackManager
 from gwhat.gwrecharge.glue import GLUEDataFrameBase
+from gwhat.gwrecharge.models_distplot import ModelsDistplotWidget
 from gwhat.utils.icons import QToolButtonSmall, get_iconsize, get_icon
 from gwhat.utils.qthelpers import create_toolbutton
 
@@ -40,6 +41,8 @@ class RechgEvalWidget(QFrame):
 
         self.wxdset = None
         self.wldset = None
+
+        self.modelsdistplot = ModelsDistplotWidget()
         self.figstack = FigureStackManager()
 
         self.progressbar = QProgressBar()
@@ -336,9 +339,18 @@ class RechgEvalWidget(QFrame):
 
         self.btn_save_glue = ExportGLUEButton(self.wxdset)
 
+        self.btn_modelsdistplot = create_toolbutton(
+            parent=self,
+            icon='models_dist',
+            tip='Display the model distribution plot.',
+            triggered=self.modelsdistplot.show,
+            iconsize=get_iconsize('normal')
+            )
+
         layout = QGridLayout(toolbar)
         layout.addWidget(btn_calib, 0, 0)
         layout.addWidget(self.btn_show_result, 0, 1)
+        layout.addWidget(self.btn_modelsdistplot, 0, 2)
         layout.addWidget(self.btn_save_glue, 0, 3)
         layout.setContentsMargins(10, 0, 10, 0)
 
@@ -351,6 +363,7 @@ class RechgEvalWidget(QFrame):
         gluedf = None if wldset is None else wldset.get_glue_at(-1)
         self._setup_ranges_from_wldset(gluedf)
         self.figstack.set_gluedf(gluedf)
+        self.modelsdistplot.set_gluedf(gluedf)
         self.btn_save_glue.set_model(gluedf)
 
     def set_wxdset(self, wxdset):
@@ -486,12 +499,14 @@ class RechgEvalWidget(QFrame):
 
             self.btn_save_glue.set_model(glue_dataframe)
             self.figstack.set_gluedf(glue_dataframe)
+            self.modelsdistplot.set_gluedf(glue_dataframe)
         self.progressbar.hide()
         self.setEnabled(True)
 
     def close(self):
         """Extend Qt method to close child windows."""
         self.figstack.close()
+        self.modelsdistplot.close()
         super().close()
 
 

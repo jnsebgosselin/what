@@ -137,6 +137,9 @@ FA_ICONS = {
     'link_off': [
         ('mdi.link-off',),
         {'color': COLOR, 'scale_factor': 1, 'rotated': 90}],
+    'models_dist': [
+        ('mdi.chart-bell-curve',),
+        {'color': COLOR, 'scale_factor': 1.2}],
     'pan': [
         ('mdi.pan',),
         {'color': COLOR, 'scale_factor': 1.3}],
